@@ -3,7 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Wordmark } from "@/components/brand-mark";
-import { BookmarkIcon, ClockIcon, CompassIcon } from "@/components/icons";
+import {
+  BookmarkIcon,
+  ClockIcon,
+  CompassIcon,
+  ShieldIcon,
+} from "@/components/icons";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -25,24 +30,34 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Wordmark size={28} />
           </Link>
 
-          <nav className="hidden items-center gap-1 md:flex">
-            {NAV.map(({ href, label, Icon }) => (
-              <Link
-                key={href}
-                href={href}
-                aria-current={isActive(href) ? "page" : undefined}
-                className={cn(
-                  "flex items-center gap-2 rounded-pill px-3.5 py-2 text-sm font-medium transition-colors",
-                  isActive(href)
-                    ? "bg-paper-sunken text-ink"
-                    : "text-ink-soft hover:bg-paper-sunken/60 hover:text-ink",
-                )}
-              >
-                <Icon size={18} />
-                {label}
-              </Link>
-            ))}
-          </nav>
+          <div className="flex items-center gap-1">
+            <nav className="hidden items-center gap-1 md:flex">
+              {NAV.map(({ href, label, Icon }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  aria-current={isActive(href) ? "page" : undefined}
+                  className={cn(
+                    "flex items-center gap-2 rounded-pill px-3.5 py-2 text-sm font-medium transition-colors",
+                    isActive(href)
+                      ? "bg-paper-sunken text-ink"
+                      : "text-ink-soft hover:bg-paper-sunken/60 hover:text-ink",
+                  )}
+                >
+                  <Icon size={18} />
+                  {label}
+                </Link>
+              ))}
+            </nav>
+            <Link
+              href="/admin"
+              aria-label="Admin"
+              title="Admin"
+              className="ml-1 flex h-9 w-9 items-center justify-center rounded-pill text-ink-faint transition-colors hover:bg-paper-sunken hover:text-ink"
+            >
+              <ShieldIcon size={18} />
+            </Link>
+          </div>
         </div>
       </header>
 

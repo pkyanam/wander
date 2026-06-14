@@ -60,6 +60,11 @@ config yet; `tsc` + Prettier are the gate.
   `apps/web/lib/local-store.ts` (localStorage), not the DB. `proxy.ts` runs bare
   `clerkMiddleware()`; **only `/admin` and `/api/v1/admin/*` require auth** (the
   `admin` role, enforced in `admin/layout.tsx` + each admin route handler).
+  Admin is granted in `auth.ts` `resolveRole()` (recomputed on every sign-in):
+  Clerk `publicMetadata.role==="admin"`, the `ADMIN_EMAILS` allowlist, an
+  already-admin account, or — when no allowlist is set and no admin exists yet —
+  the first signed-in user (zero-config bootstrap). The app shell exposes a
+  discreet shield link to `/admin` (the only sign-in entry point).
   `(app)/layout.tsx` no longer gates on auth/onboarding. The `/api/v1/wander`
   endpoint is anonymous: the client passes `interests` + `exclude` (seen ids)
   from localStorage and the recommender biases on those. Sign-in/sign-up pages

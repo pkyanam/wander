@@ -5,6 +5,44 @@ import { eq } from "drizzle-orm";
 
 const { users, collections, userInterests, tags } = schema;
 
+/** Comma-separated allowlist of emails that should always be admins. */
+function adminEmailAllowlist(): string[] {
+  return (process.env.ADMIN_EMAILS ?? "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+/**
+ * Decide a user's role on (re)sign-in. An account is admin when any of:
+ *  - Clerk `publicMetadata.role === "admin"` (manual grant in the dashboard),
+ *  - its email is in the `ADMIN_EMAILS` allowlist,
+ *  - it is already an admin (never silently demote), or
+ *  - bootstrap: no allowlist is set and no admin exists yet, so the very first
+ *    user to sign in becomes the admin (zero-config local/self-host).
+ */
+async function resolveRole(opts: {
+  email: string | null;
+  metaRole: string | undefined;
+  existing: UserRow | null;
+}): Promise<UserRole> {
+  if (opts.metaRole === "admin") return "admin";
+  const allowlist = adminEmailAllowlist();
+  if (opts.email && allowlist.includes(opts.email.toLowerCase())) return "admin";
+  if (opts.existing?.role === "admin") return "admin";
+
+  if (allowlist.length === 0) {
+    const db = getDb();
+    const anyAdmin = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.role, "admin"))
+      .limit(1);
+    if (!anyAdmin[0]) return "admin";
+  }
+  return "user";
+}
+
 /**
  * Resolve the internal user row for the current Clerk session, creating it
  * (and a default "Saved" collection) on first sight. Returns null when signed
@@ -20,21 +58,24 @@ export async function getOrCreateUser(): Promise<UserRow | null> {
     .from(users)
     .where(eq(users.clerkId, clerkId))
     .limit(1);
-  if (found[0]) return found[0];
+  const existing = found[0] ?? null;
 
   const cu = await currentUser();
   const email =
     cu?.primaryEmailAddress?.emailAddress ??
     cu?.emailAddresses?.[0]?.emailAddress ??
+    existing?.email ??
     null;
   const displayName =
     [cu?.firstName, cu?.lastName].filter(Boolean).join(" ") ||
     cu?.username ||
+    existing?.displayName ||
     null;
-  const role: UserRole =
-    (cu?.publicMetadata as { role?: string } | undefined)?.role === "admin"
-      ? "admin"
-      : "user";
+  const role = await resolveRole({
+    email,
+    metaRole: (cu?.publicMetadata as { role?: string } | undefined)?.role,
+    existing,
+  });
 
   const inserted = await db
     .insert(users)
