@@ -1,0 +1,129 @@
+# Wander — Docker Compose (single source of truth for Coolify deployment)
+#
+# Brings up the whole stack in one file:
+#   - app         the Next.js server (runs DB migrations on boot)
+#   - postgres    the database (persistent named volume)
+#   - cloudflared the public ingress (Cloudflare Tunnel)
+#   - curator     optional one-shot Curation Engine worker (profile: curator)
+#
+# ── Coolify ─────────────────────────────────────────────────────────────────
+#   1. Create a "Docker Compose" resource pointing at this file (repo root).
+#   2. Set every secret/var in Coolify's Environment Variables UI — Coolify
+#      substitutes the ${VARS} below at deploy time. At minimum:
+#        DATABASE_URL (or keep the default + set POSTGRES_PASSWORD to "wander"),
+#        POSTGRES_PASSWORD, NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY, CLERK_SECRET_KEY,
+#        NEXT_PUBLIC_APP_URL (your public tunnel hostname),
+#        CLOUDFLARED_TUNNEL_TOKEN.
+#      See .env.example for the full list.
+#   3. Ingress = Cloudflare Tunnel. In the Cloudflare Zero Trust dashboard, map
+#      the tunnel's public hostname to the internal service `http://app:3000`.
+#      No host ports are published; cloudflared reaches the app over the compose
+#      network, and Postgres is never exposed to the public internet.
+#
+# ── Local development ────────────────────────────────────────────────────────
+#   docker compose up -d postgres     # just the DB (bound to 127.0.0.1:5432)
+#   pnpm dev                          # run the app on the host
+# The app + cloudflared stay down unless you start them explicitly.
+
+name: wander
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-wander}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-wander}
+      POSTGRES_DB: ${POSTGRES_DB:-wander}
+    # Loopback-only: reachable by `pnpm dev` on a dev machine and host-locally on
+    # the Coolify server, but never published to the public internet.
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - wander_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-wander} -d ${POSTGRES_DB:-wander}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  app:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+      # Migrations run on boot (always); seed the catalog on boot when true.
+      WANDER_SEED_ON_START: ${WANDER_SEED_ON_START:-false}
+      # If you change POSTGRES_PASSWORD, set DATABASE_URL to match.
+      DATABASE_URL: ${DATABASE_URL:-postgres://wander:wander@postgres:5432/wander}
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
+      CLERK_SECRET_KEY: ${CLERK_SECRET_KEY}
+      NEXT_PUBLIC_CLERK_SIGN_IN_URL: ${NEXT_PUBLIC_CLERK_SIGN_IN_URL:-/sign-in}
+      NEXT_PUBLIC_CLERK_SIGN_UP_URL: ${NEXT_PUBLIC_CLERK_SIGN_UP_URL:-/sign-up}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+    # Internal only; cloudflared reaches the app at http://app:3000.
+    expose:
+      - "3000"
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      # Token from a Cloudflare Zero Trust Tunnel (set in Coolify). The tunnel's
+      # public hostname should route to http://app:3000.
+      TUNNEL_TOKEN: ${CLOUDFLARED_TUNNEL_TOKEN}
+    depends_on:
+      app:
+        condition: service_healthy
+
+  # Optional Curation Engine worker. Discovers + enriches candidate destinations
+  # into `curation_candidates` (status needs_review) for an admin to review in
+  # /admin. One-shot (runs a pass and exits); with no provider keys it skips
+  # those adapters and no-ops cleanly. Behind the `curator` profile so it never
+  # runs as part of the default deploy:
+  #   docker compose --profile curator run --rm curator --limit=200
+  curator:
+    build:
+      context: .
+      dockerfile: packages/curation/Dockerfile
+    restart: "no"
+    profiles: ["curator"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL:-postgres://wander:wander@postgres:5432/wander}
+      # --- Browserbase (discovery + browser lane) ---
+      BROWSERBASE_API_KEY: ${BROWSERBASE_API_KEY:-}
+      BROWSERBASE_PROJECT_ID: ${BROWSERBASE_PROJECT_ID:-}
+      BROWSERBASE_MAX_CONCURRENCY: ${BROWSERBASE_MAX_CONCURRENCY:-20}
+      # --- Exa (neural search + find_similar) ---
+      EXA_API_KEY: ${EXA_API_KEY:-}
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      # --- Enrichment model (hook/summary/tags) ---
+      CURATION_MODEL: ${CURATION_MODEL:-}
+      CURATION_MODEL_API_KEY: ${CURATION_MODEL_API_KEY:-}
+      CURATION_MODEL_BASE_URL: ${CURATION_MODEL_BASE_URL:-}
+      # --- Engine tuning ---
+      CURATION_PER_DOMAIN_CAP: ${CURATION_PER_DOMAIN_CAP:-3}
+      CURATION_FETCH_TIMEOUT_MS: ${CURATION_FETCH_TIMEOUT_MS:-8000}
+      # --- Image enrichment (shared with pnpm db:enrich) ---
+      SCREENSHOT_PROVIDER: ${SCREENSHOT_PROVIDER:-microlink}
+      MICROLINK_API_KEY: ${MICROLINK_API_KEY:-}
+      SCREENSHOT_URL_TEMPLATE: ${SCREENSHOT_URL_TEMPLATE:-}
+
+volumes:
+  wander_pgdata:

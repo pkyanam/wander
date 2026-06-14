@@ -1,0 +1,21 @@
+# keep the build context small and prevent clobbering installed deps
+**/node_modules
+node_modules
+**/.next
+.next
+.git
+.gitignore
+.turbo
+**/.turbo
+*.log
+.DS_Store
+.env
+.env.*
+**/.env
+**/.env.*
+.vscode
+.idea
+.cloudflared
+# build artifacts / local-only
+apps/web/.next
+coverage

@@ -1,0 +1,13 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+# pnpm 10 blocks lifecycle (postinstall) scripts by default.
+# Allow the native-binary packages our stack needs to build.
+onlyBuiltDependencies:
+  - "@tailwindcss/oxide"
+  - lightningcss
+  - sharp
+  - esbuild
+  - "@clerk/shared"
+  - unrs-resolver

@@ -1,0 +1,163 @@
+@import "tailwindcss";
+
+/* ── Theme: warm editorial / indie-web ──────────────────────────────────────
+   CSS-first Tailwind v4 config. These tokens generate utilities (bg-paper,
+   text-ink, font-display, rounded-card, shadow-card, …) and are also available
+   as raw CSS variables for hand-written styles. */
+@theme {
+  /* Typography — wired to next/font CSS variables (see lib/fonts.ts) */
+  --font-sans:
+    var(--font-inter), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-display:
+    var(--font-fraunces), ui-serif, Georgia, "Times New Roman", serif;
+
+  /* Surfaces — warm cream paper */
+  --color-paper: #f6f0e4;
+  --color-paper-raised: #fffdf8;
+  --color-paper-sunken: #ece2cf;
+
+  /* Ink — warm near-blacks and muted browns */
+  --color-ink: #241d15;
+  --color-ink-soft: #5b5142;
+  --color-ink-faint: #908472;
+
+  /* Hairlines */
+  --color-line: #e3d8c3;
+  --color-line-strong: #d3c4a8;
+
+  /* Accent — terracotta "wonder" */
+  --color-accent: #bf4d2c;
+  --color-accent-strong: #9d3a1d;
+  --color-accent-soft: #f1dacd;
+
+  /* Love — warm rose */
+  --color-love: #c5304a;
+  --color-love-soft: #f3d2d6;
+
+  /* Compass teal — secondary accent drawn from the brand mark */
+  --color-compass: #1f9e8f;
+  --color-compass-strong: #16786c;
+  --color-compass-soft: #cfe9e4;
+  --color-compass-glow: #5fd6cb;
+
+  /* Brand dark — the charcoal of the app icon, for brand moments */
+  --color-brand-dark: #1b1c1e;
+  --color-brand-dark-soft: #2a2c2f;
+
+  /* Radii */
+  --radius-card: 1.375rem;
+  --radius-lg: 1rem;
+  --radius-pill: 999px;
+
+  /* Soft, warm shadows (long & low for a paper-on-table feel) */
+  --shadow-card:
+    0 1px 2px rgb(36 29 21 / 0.05), 0 14px 34px -16px rgb(36 29 21 / 0.22);
+  --shadow-pop:
+    0 2px 6px rgb(36 29 21 / 0.1), 0 28px 56px -20px rgb(36 29 21 / 0.34);
+  --shadow-inset: inset 0 1px 0 rgb(255 255 255 / 0.5);
+
+  /* Motion easing */
+  --ease-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-snap: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  * {
+    border-color: var(--color-line);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-feature-settings: "cv05", "ss01";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    /* Very subtle warm vignette — texture without "loud gradients". */
+    background-image:
+      radial-gradient(
+        120% 80% at 50% -10%,
+        rgb(255 252 245 / 0.7),
+        transparent 60%
+      ),
+      radial-gradient(
+        80% 60% at 100% 100%,
+        rgb(191 77 44 / 0.04),
+        transparent 55%
+      );
+    background-attachment: fixed;
+    min-height: 100dvh;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    font-optical-sizing: auto;
+    letter-spacing: -0.012em;
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  ::selection {
+    background: var(--color-accent-soft);
+    color: var(--color-accent-strong);
+  }
+
+  /* Consistent, visible focus that fits the warm palette. */
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* Respect reduced-motion globally (Motion components also check this). */
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
+  }
+}
+
+@layer components {
+  /* Frosted bar used by the top/bottom navigation. */
+  .surface-blur {
+    background: color-mix(in srgb, var(--color-paper) 78%, transparent);
+    backdrop-filter: saturate(1.4) blur(14px);
+    -webkit-backdrop-filter: saturate(1.4) blur(14px);
+  }
+
+  /* Hide scrollbars on horizontal chip rows while keeping scroll. */
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Utility: a thin grain overlay class for hero blocks (optional, subtle). */
+@utility grain {
+  position: relative;
+}

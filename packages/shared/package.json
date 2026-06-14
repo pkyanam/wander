@@ -1,0 +1,26 @@
+{
+  "name": "@wander/shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./tags": "./src/tags.ts",
+    "./enums": "./src/enums.ts",
+    "./types": "./src/types.ts",
+    "./url": "./src/url.ts",
+    "./validation": "./src/validation.ts",
+    "./curation": "./src/curation.ts",
+    "./analytics": "./src/analytics.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@wander/config": "workspace:*",
+    "typescript": "^6.0.3"
+  }
+}

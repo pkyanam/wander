@@ -1,0 +1,26 @@
+{
+  "name": "@wander/curation",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "curate": "tsx src/cli.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@wander/db": "workspace:*",
+    "@wander/shared": "workspace:*",
+    "drizzle-orm": "^0.45.2"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@wander/config": "workspace:*",
+    "dotenv": "^17.2.0",
+    "esbuild": "^0.25.0",
+    "tsx": "^4.22.4",
+    "typescript": "^6.0.3"
+  }
+}

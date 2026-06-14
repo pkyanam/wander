@@ -1,0 +1,10 @@
+{
+  "extends": "@wander/config/tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    // Isomorphic package (browser + node); DOM lib types the WHATWG URL /
+    // URLSearchParams used by the shared canonicalizer in url.ts.
+    "lib": ["ES2023", "DOM"]
+  },
+  "include": ["src/**/*.ts"]
+}

@@ -1,0 +1,30 @@
+{
+  "name": "wander",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Wander — wander into wonder. Serendipitous web discovery.",
+  "packageManager": "pnpm@10.33.2",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @wander/web dev",
+    "build": "pnpm --filter @wander/web build",
+    "start": "pnpm --filter @wander/web start",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "lint": "pnpm -r --if-present lint",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,css}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,css}\"",
+    "db:generate": "pnpm --filter @wander/db generate",
+    "db:migrate": "pnpm --filter @wander/db migrate",
+    "db:push": "pnpm --filter @wander/db push",
+    "db:studio": "pnpm --filter @wander/db studio",
+    "db:seed": "pnpm --filter @wander/db seed",
+    "db:enrich": "pnpm --filter @wander/db enrich",
+    "curate": "pnpm --filter @wander/curation curate"
+  },
+  "devDependencies": {
+    "prettier": "^3.4.2",
+    "typescript": "^6.0.3"
+  }
+}
