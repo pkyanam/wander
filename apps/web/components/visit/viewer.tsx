@@ -5,28 +5,28 @@ import { useRouter } from "next/navigation";
 import type { DestinationCard } from "@wander/shared";
 import { ArrowLeftIcon, BookmarkIcon, ExternalIcon } from "@/components/icons";
 import { buttonClasses } from "@/components/ui/button";
-import { api } from "@/lib/client";
+import {
+  addSaved,
+  isSaved,
+  recordHistory,
+  removeSaved,
+} from "@/lib/local-store";
 import { faviconUrl } from "@/lib/utils";
 
-export function Viewer({
-  card,
-  initiallySaved,
-}: {
-  card: DestinationCard;
-  initiallySaved: boolean;
-}) {
+export function Viewer({ card }: { card: DestinationCard }) {
   const router = useRouter();
   const [loaded, setLoaded] = useState(false);
   const [blocked, setBlocked] = useState(false);
-  const [saved, setSaved] = useState(initiallySaved);
+  const [saved, setSaved] = useState(false);
   const recorded = useRef(false);
 
   // Opening the viewer counts as a visit (covers Saved/History entry points too).
   useEffect(() => {
+    setSaved(isSaved(card.id));
     if (recorded.current) return;
     recorded.current = true;
-    api.interact(card.id, "visited").catch(() => {});
-  }, [card.id]);
+    recordHistory(card, "visited");
+  }, [card]);
 
   // Heuristic embed-failure fallback: if it never loads, offer the new tab.
   useEffect(() => {
@@ -35,14 +35,14 @@ export function Viewer({
     return () => clearTimeout(t);
   }, [loaded]);
 
-  async function toggleSave() {
+  function toggleSave() {
     const willSave = !saved;
     setSaved(willSave);
-    try {
-      if (willSave) await api.save(card.id);
-      else await api.unsave(card.id);
-    } catch {
-      setSaved(!willSave);
+    if (willSave) {
+      addSaved(card);
+      recordHistory(card, "saved");
+    } else {
+      removeSaved(card.id);
     }
   }
 

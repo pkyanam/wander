@@ -5,6 +5,14 @@ import { useRouter } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type { DestinationCard } from "@wander/shared";
 import { api, ApiError, type WanderResult } from "@/lib/client";
+import {
+  addSaved,
+  addSeen,
+  getInterests,
+  getSeen,
+  recordHistory,
+  removeSaved,
+} from "@/lib/local-store";
 import { WanderCard } from "./wander-card";
 import { ActionBar } from "./action-bar";
 import { Button } from "@/components/ui/button";
@@ -26,11 +34,17 @@ export function WanderDeck() {
   const [error, setError] = useState<string | null>(null);
 
   const seenRef = useRef<string[]>([]);
+  const interestsRef = useRef<string[]>([]);
   const pendingFetch = useRef<Promise<WanderResult> | null>(null);
 
   const fetchCard = useCallback(async (): Promise<WanderResult> => {
-    const res = await api.wander(seenRef.current);
-    if (res.card) seenRef.current.push(res.card.id);
+    const res = await api.wander(seenRef.current, interestsRef.current);
+    if (res.card) {
+      seenRef.current.push(res.card.id);
+      // Persist the seen id + a "viewed" history entry for the anonymous visitor.
+      addSeen(res.card.id);
+      recordHistory(res.card, "viewed");
+    }
     return res;
   }, []);
 
@@ -54,6 +68,9 @@ export function WanderDeck() {
 
   useEffect(() => {
     let cancelled = false;
+    // Seed personalization from localStorage before the first fetch.
+    interestsRef.current = getInterests();
+    seenRef.current = [...getSeen()];
     void (async () => {
       if (!cancelled) await loadFirst();
     })();
@@ -69,7 +86,7 @@ export function WanderDeck() {
     setExitDir(kind === "love" ? "up" : "down");
     const type =
       kind === "love" ? "loved" : kind === "report" ? "reported" : "skipped";
-    api.interact(current.id, type).catch(() => {});
+    recordHistory(current, type);
     pendingFetch.current = fetchCard();
     setCurrent(null); // triggers exit; next card resolves during the animation
   }
@@ -98,15 +115,15 @@ export function WanderDeck() {
     }
   }
 
-  async function onSave() {
+  function onSave() {
     if (!current) return;
     const willSave = !saved;
     setSaved(willSave);
-    try {
-      if (willSave) await api.save(current.id);
-      else await api.unsave(current.id);
-    } catch {
-      setSaved(!willSave);
+    if (willSave) {
+      addSaved(current);
+      recordHistory(current, "saved");
+    } else {
+      removeSaved(current.id);
     }
   }
 

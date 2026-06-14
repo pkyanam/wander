@@ -2,16 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { UserButton } from "@clerk/nextjs";
 import { Wordmark } from "@/components/brand-mark";
-import {
-  BookmarkIcon,
-  ClockIcon,
-  CompassIcon,
-  ShieldIcon,
-} from "@/components/icons";
+import { BookmarkIcon, ClockIcon, CompassIcon } from "@/components/icons";
 import { cn } from "@/lib/utils";
-import type { UserProfile } from "@wander/shared";
 
 const NAV = [
   { href: "/wander", label: "Wander", Icon: CompassIcon },
@@ -19,13 +12,7 @@ const NAV = [
   { href: "/history", label: "History", Icon: ClockIcon },
 ] as const;
 
-export function AppShell({
-  profile,
-  children,
-}: {
-  profile: UserProfile;
-  children: React.ReactNode;
-}) {
+export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isActive = (href: string) =>
     pathname === href || pathname.startsWith(`${href}/`);
@@ -56,19 +43,6 @@ export function AppShell({
               </Link>
             ))}
           </nav>
-
-          <div className="flex items-center gap-1.5">
-            {profile.role === "admin" && (
-              <Link
-                href="/admin"
-                aria-label="Catalog admin"
-                className="flex h-9 w-9 items-center justify-center rounded-pill text-ink-soft transition-colors hover:bg-paper-sunken hover:text-ink"
-              >
-                <ShieldIcon size={18} />
-              </Link>
-            )}
-            <UserButton appearance={{ elements: { avatarBox: "h-8 w-8" } }} />
-          </div>
         </div>
       </header>
 

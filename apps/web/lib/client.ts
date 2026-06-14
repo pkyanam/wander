@@ -7,11 +7,7 @@ import type {
   DestinationCard,
   DestinationInput,
   DestinationUpdateInput,
-  HistoryItem,
-  InteractionType,
-  SavedItem,
   StartCurationRunInput,
-  UserProfile,
 } from "@wander/shared";
 
 export class ApiError extends Error {
@@ -48,44 +44,13 @@ export interface WanderResult {
 
 /** Typed client for the /api/v1 surface, used by browser components. */
 export const api = {
-  me: () => request<UserProfile>("/api/v1/me"),
-
-  updateInterests: (interests: string[]) =>
-    request<UserProfile>("/api/v1/me/interests", {
-      method: "PATCH",
-      body: JSON.stringify({ interests }),
-    }),
-
-  wander: (exclude: string[] = []) =>
+  // Wander is anonymous — personalization (interests + the already-seen set)
+  // is held in localStorage and passed in with each request.
+  wander: (exclude: string[] = [], interests: string[] = []) =>
     request<WanderResult>("/api/v1/wander", {
       method: "POST",
-      body: JSON.stringify({ exclude }),
+      body: JSON.stringify({ exclude, interests }),
     }),
-
-  interact: (
-    destinationId: string,
-    type: InteractionType,
-    context?: Record<string, unknown>,
-  ) =>
-    request<{ recorded: true }>(
-      `/api/v1/destinations/${destinationId}/interactions`,
-      { method: "POST", body: JSON.stringify({ type, context }) },
-    ),
-
-  save: (destinationId: string) =>
-    request<{ saved: true; card: DestinationCard }>("/api/v1/saved", {
-      method: "POST",
-      body: JSON.stringify({ destinationId }),
-    }),
-
-  unsave: (destinationId: string) =>
-    request<{ removed: true }>(`/api/v1/saved/${destinationId}`, {
-      method: "DELETE",
-    }),
-
-  saved: () => request<{ items: SavedItem[] }>("/api/v1/saved"),
-
-  history: () => request<{ items: HistoryItem[] }>("/api/v1/history"),
 };
 
 export interface AdminListResult {

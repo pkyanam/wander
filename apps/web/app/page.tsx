@@ -1,19 +1,12 @@
-import { auth } from "@clerk/nextjs/server";
-import { redirect } from "next/navigation";
 import Link from "next/link";
 import { BrandMark } from "@/components/brand-mark";
 import { buttonClasses } from "@/components/ui/button";
 import { Tag } from "@/components/ui/chip";
 import { INTEREST_TAGS } from "@wander/shared";
 
-export const dynamic = "force-dynamic";
-
 const HIGHLIGHTS = INTEREST_TAGS.slice(0, 7);
 
-export default async function LandingPage() {
-  const { userId } = await auth();
-  if (userId) redirect("/wander");
-
+export default function LandingPage() {
   return (
     <main className="relative mx-auto flex min-h-dvh max-w-2xl flex-col items-center justify-center px-6 py-16 text-center">
       <BrandMark size={76} className="mb-8 drop-shadow-sm" />
@@ -34,11 +27,11 @@ export default async function LandingPage() {
       </p>
 
       <div className="mt-9 flex flex-col items-center gap-3 sm:flex-row">
-        <Link href="/sign-up" className={buttonClasses("primary", "lg")}>
+        <Link href="/onboarding" className={buttonClasses("primary", "lg")}>
           Start wandering
         </Link>
-        <Link href="/sign-in" className={buttonClasses("ghost", "lg")}>
-          I already have an account
+        <Link href="/wander" className={buttonClasses("ghost", "lg")}>
+          Just surprise me
         </Link>
       </div>
 

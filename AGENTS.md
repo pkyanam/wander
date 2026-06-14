@@ -54,10 +54,19 @@ config yet; `tsc` + Prettier are the gate.
   `api.ts` (response envelope + Zod body parsing), `db-helpers.ts` (all
   data access + DTO mappers), `recommendation.ts` (the wander query),
   `analytics.ts` (structured event log), `client.ts` (browser API client).
-- **Auth model:** `proxy.ts` runs bare `clerkMiddleware()` (no blanket protect).
-  Authorization happens in layouts (redirect) and route handlers (JSON 401/403).
-  `(app)/layout.tsx` requires auth + onboarding; `admin/layout.tsx` requires the
-  `admin` role.
+- **Auth model:** the public app is fully anonymous — anyone can wander, save,
+  and browse history without signing in. Personalization (interests, saved,
+  history, the already-seen set) lives entirely in the browser via
+  `apps/web/lib/local-store.ts` (localStorage), not the DB. `proxy.ts` runs bare
+  `clerkMiddleware()`; **only `/admin` and `/api/v1/admin/*` require auth** (the
+  `admin` role, enforced in `admin/layout.tsx` + each admin route handler).
+  `(app)/layout.tsx` no longer gates on auth/onboarding. The `/api/v1/wander`
+  endpoint is anonymous: the client passes `interests` + `exclude` (seen ids)
+  from localStorage and the recommender biases on those. Sign-in/sign-up pages
+  remain solely so admins can authenticate. DB tables for per-user
+  personalization (`interactions`, `saved_destinations`, `user_interests`,
+  `collections`) and their helpers in `db-helpers.ts`/`auth.ts` are retained but
+  no longer used by the public app.
 
 ## Conventions
 

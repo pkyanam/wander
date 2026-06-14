@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
 import { INTEREST_TAGS } from "@wander/shared";
@@ -8,17 +8,17 @@ import { BrandMark } from "@/components/brand-mark";
 import { Button } from "@/components/ui/button";
 import { InterestChip } from "@/components/ui/chip";
 import { SparklesIcon } from "@/components/icons";
-import { api, ApiError } from "@/lib/client";
+import { getInterests, setInterests } from "@/lib/local-store";
 
-export function InterestPicker({
-  initialInterests,
-}: {
-  initialInterests: string[];
-}) {
+export function InterestPicker() {
   const router = useRouter();
-  const [selected, setSelected] = useState(new Set(initialInterests));
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+
+  // Hydrate from any previously chosen interests in localStorage.
+  useEffect(() => {
+    setSelected(new Set(getInterests()));
+  }, []);
 
   function toggle(slug: string) {
     setSelected((prev) => {
@@ -29,17 +29,10 @@ export function InterestPicker({
     });
   }
 
-  async function finish(interests: string[]) {
+  function finish(interests: string[]) {
     setSubmitting(true);
-    setError(null);
-    try {
-      await api.updateInterests(interests);
-      router.push("/wander");
-      router.refresh();
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Something went wrong.");
-      setSubmitting(false);
-    }
+    setInterests(interests);
+    router.push("/wander");
   }
 
   return (
@@ -79,12 +72,6 @@ export function InterestPicker({
           </motion.div>
         ))}
       </div>
-
-      {error && (
-        <p className="mt-6 text-sm text-love" role="alert">
-          {error}
-        </p>
-      )}
 
       <div className="mt-10 flex flex-col-reverse items-center gap-3 sm:flex-row sm:justify-between">
         <button

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getOrCreateUser } from "@/lib/auth";
-import { isSaved, loadCard } from "@/lib/db-helpers";
+import { loadCard } from "@/lib/db-helpers";
 import { Viewer } from "@/components/visit/viewer";
 
 export const dynamic = "force-dynamic";
@@ -13,10 +12,9 @@ export default async function VisitPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const user = await getOrCreateUser();
   const card = await loadCard(id);
   if (!card) notFound();
 
-  const saved = user ? await isSaved(user.id, id) : false;
-  return <Viewer card={card} initiallySaved={saved} />;
+  // Saved state lives in localStorage; the Viewer resolves it on mount.
+  return <Viewer card={card} />;
 }

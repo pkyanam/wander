@@ -1,27 +1,29 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import type { SavedItem } from "@wander/shared";
 import { DestinationRow } from "@/components/destination-row";
 import { EmptyState } from "@/components/ui/empty-state";
 import { buttonClasses } from "@/components/ui/button";
 import { BookmarkIcon, TrashIcon } from "@/components/icons";
-import { api } from "@/lib/client";
+import { getSaved, removeSaved, type SavedEntry } from "@/lib/local-store";
 import { timeAgo } from "@/lib/utils";
 
-export function SavedList({ initialItems }: { initialItems: SavedItem[] }) {
-  const [items, setItems] = useState(initialItems);
+export function SavedList() {
+  const [items, setItems] = useState<SavedEntry[]>([]);
+  const [ready, setReady] = useState(false);
 
-  async function remove(id: string) {
-    const prev = items;
-    setItems(items.filter((i) => i.destination.id !== id));
-    try {
-      await api.unsave(id);
-    } catch {
-      setItems(prev);
-    }
+  useEffect(() => {
+    setItems(getSaved());
+    setReady(true);
+  }, []);
+
+  function remove(id: string) {
+    removeSaved(id);
+    setItems((prev) => prev.filter((i) => i.destination.id !== id));
   }
+
+  if (!ready) return null;
 
   if (items.length === 0) {
     return (

@@ -21,9 +21,11 @@ export type UpdateInterestsInput = z.infer<typeof updateInterestsSchema>;
 
 /** POST /api/v1/wander */
 export const wanderRequestSchema = z.object({
-  // Client may pass IDs already shown this session so we never repeat them
-  // even before interactions are persisted.
-  exclude: z.array(z.uuid()).max(200).optional(),
+  // Client passes IDs already shown (this session + persisted in localStorage)
+  // so we never repeat them. Anonymous personalization lives client-side.
+  exclude: z.array(z.uuid()).max(500).optional(),
+  // The visitor's interest tags (from localStorage) used to bias the picks.
+  interests: z.array(tagSlug).max(64).optional(),
 });
 export type WanderRequestInput = z.infer<typeof wanderRequestSchema>;
 

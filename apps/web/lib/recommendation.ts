@@ -4,65 +4,49 @@ import { sql } from "drizzle-orm";
 /**
  * Recommendation v0 (PRD §9 / PLAN §7) — intentionally simple and inspectable.
  *
- * Score per approved, not-yet-seen destination:
+ * Wander is anonymous: personalization lives in the browser (localStorage), so
+ * the client passes the visitor's interest tags and the ids they've already
+ * seen. We score each approved destination by:
  *   quality * 0.6
  *   + matched interest-tag weight (capped)         → personalization
- *   + loved/saved tag affinity (capped)            → actions teach the system
  *   + random jitter                                → serendipity / exploration
- *   - skipped tag penalty (capped)                 → down-rank what you skip
  *
  * We fetch a small ranked pool and let the caller drop session-excluded ids,
- * so we never bind arrays into SQL. No embeddings required for v0.
+ * so we never bind the (potentially large) exclude set into SQL. No embeddings
+ * required for v0.
  */
 export async function recommendNext(opts: {
-  userId: string;
+  interests?: string[];
   exclude?: string[];
   limit?: number;
 }): Promise<string[]> {
   const db = getDb();
   const limit = Math.max(1, opts.limit ?? 1);
-  const fetchK = Math.max(limit * 6, 25);
   const exclude = new Set(opts.exclude ?? []);
+  // Fetch enough to survive dropping everything the visitor has already seen.
+  const fetchK = Math.max(limit * 6, 25) + exclude.size;
+
+  const interests = [...new Set(opts.interests ?? [])];
+  const interestArray = interests.length
+    ? sql`ARRAY[${sql.join(
+        interests.map((i) => sql`${i}`),
+        sql`, `,
+      )}]::text[]`
+    : sql`ARRAY[]::text[]`;
 
   const rows = (await db.execute(sql`
-    WITH ui AS (
-      SELECT tag_id, weight FROM user_interests WHERE user_id = ${opts.userId}
-    ),
-    loves AS (
-      SELECT dt.tag_id, count(*)::float AS n
-      FROM interactions i
-      JOIN destination_tags dt ON dt.destination_id = i.destination_id
-      WHERE i.user_id = ${opts.userId} AND i.type IN ('loved', 'saved')
-      GROUP BY dt.tag_id
-    ),
-    skips AS (
-      SELECT dt.tag_id, count(*)::float AS n
-      FROM interactions i
-      JOIN destination_tags dt ON dt.destination_id = i.destination_id
-      WHERE i.user_id = ${opts.userId} AND i.type = 'skipped'
-      GROUP BY dt.tag_id
-    ),
-    seen AS (
-      SELECT DISTINCT destination_id FROM interactions
-      WHERE user_id = ${opts.userId}
-        AND type IN ('viewed', 'skipped', 'loved', 'visited')
-    ),
-    scored AS (
+    WITH scored AS (
       SELECT
         d.id AS id,
         d.quality_score AS q,
-        COALESCE(SUM(ui.weight), 0) AS interest_weight,
-        COALESCE(SUM(loves.n), 0) AS love_weight,
-        COALESCE(SUM(skips.n), 0) AS skip_weight
+        COALESCE(
+          SUM(CASE WHEN t.slug = ANY(${interestArray}) THEN 1 ELSE 0 END),
+          0
+        ) AS interest_weight
       FROM destinations d
       LEFT JOIN destination_tags dt ON dt.destination_id = d.id
-      LEFT JOIN ui ON ui.tag_id = dt.tag_id
-      LEFT JOIN loves ON loves.tag_id = dt.tag_id
-      LEFT JOIN skips ON skips.tag_id = dt.tag_id
+      LEFT JOIN tags t ON t.id = dt.tag_id
       WHERE d.status = 'approved'
-        AND NOT EXISTS (
-          SELECT 1 FROM seen WHERE seen.destination_id = d.id
-        )
       GROUP BY d.id, d.quality_score
     )
     SELECT id
@@ -70,9 +54,7 @@ export async function recommendNext(opts: {
     ORDER BY (
       q * 0.6
       + LEAST(interest_weight, 6) * 14
-      + LEAST(love_weight, 8) * 8
       + random() * 18
-      - LEAST(skip_weight, 8) * 6
     ) DESC
     LIMIT ${fetchK}
   `)) as unknown as Array<{ id: string }>;
